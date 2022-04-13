@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
-	"github.com/milvus-io/milvus-sdk-go/v2/entity"
+	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
+	"github.com/xiaocai2333/milvus-sdk-go/v2/entity"
 	"io"
 	"math"
 	"os"
@@ -21,7 +21,7 @@ const (
 	QueryFile = "query.npy"
 	DataPath = "/data/milvus/raw_data/zjlab"
 	RunTime = 1000
-	Goroutine = 100
+	Goroutine = 1
 )
 
 var (
@@ -135,12 +135,12 @@ func generatedEntities(nq int) []entity.Vector {
 //						}
 //						avgTime := float64(cost/RunTime)/1000.0/1000.0
 //						qps := float64(nq)/avgTime
-//						fmt.Printf("average search time: %f， qps: %f \n", avgTime, qps)
+//						fmt.Printf("average search time: %f， vps: %f \n", avgTime, qps)
 //						allQPS += qps
 //					}()
 //				}
 //				wg.Wait()
-//				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, qps = %f \n", nq, topK, ef, Goroutine, allQPS)
+//				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, vps = %f \n", nq, topK, ef, Goroutine, allQPS)
 //			}
 //		}
 //	}
@@ -157,8 +157,8 @@ func search() {
 			}
 			for _, topK := range TopK {
 				var wg sync.WaitGroup
+				wg.Add(Goroutine)
 				for g := 0; g < Goroutine; g++ {
-					wg.Add(1)
 					go func() {
 						defer wg.Done()
 						client := createClient()
@@ -180,33 +180,37 @@ func search() {
 							if err != nil {
 								panic(err)
 							}
-							cost += time.Since(start).Microseconds()
+							searchCost := time.Since(start).Microseconds()
+							fmt.Printf("search cost: %d \n", searchCost)
+							cost += searchCost
 						}
 						avgTime := float64(cost/RunTime)/1000.0/1000.0
 						qps := float64(nq)/avgTime
-						fmt.Printf("average search time: %f， qps: %f \n", avgTime, qps)
+						fmt.Printf("average search time: %f， vps: %f \n", avgTime, qps)
 						allQPS += qps
 					}()
 				}
 				wg.Wait()
-				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, qps = %f \n", nq, topK, ef, Goroutine, allQPS)
+				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, vps = %f \n", nq, topK, ef, Goroutine, allQPS)
 			}
 		}
 	}
 }
 
 func main() {
-	client := createClient()
-	defer client.Close()
-	var wg sync.WaitGroup
-	for i := 0; i < Goroutine; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			search()
-		}()
-	}
-	wg.Wait()
+	search()
+	//defer client.Close()
+	//var wg sync.WaitGroup
+	//for i := 0; i < Goroutine; i++ {
+	//	wg.Add(1)
+	//	go func() {
+	//		defer wg.Done()
+	//		search()
+	//	}()
+	//}
+	//wg.Wait()
+	//client := createClient()
+	//
 	//search(client)
 	//client.Close()
 }

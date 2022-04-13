@@ -2,7 +2,7 @@ module milvus-sdk-go
 
 go 1.17
 
-require github.com/milvus-io/milvus-sdk-go/v2 v2.0.0
+require github.com/xiaocai2333/milvus-sdk-go/v2 v2.0.2
 
 require (
 	github.com/golang/protobuf v1.4.3 // indirect
