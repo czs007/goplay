@@ -163,26 +163,36 @@ func search() {
 						defer wg.Done()
 						client := createClient()
 						defer client.Close()
-						has, err := client.HasCollection(context.Background(), "taip")
-						if err != nil {
-							fmt.Println("Get collection failed, err = ", err)
-							return
+						//has, err := client.HasCollection(context.Background(), "taip")
+						//if err != nil {
+						//	fmt.Println("Get collection failed, err = ", err)
+						//	return
+						//}
+						//if !has {
+						//	fmt.Println("Get collection failed, collection is not exist")
+						//	return
+						//}
+						for i := 0; i < 5; i++ {
+							_, err := client.Search(context.Background(), CollectionName, []string{}, "", []string{},
+								vectors, "vec", entity.L2, topK, searchParams)
+							if err != nil {
+								panic(err)
+							}
 						}
-						if !has {
-							fmt.Println("Get collection failed, collection is not exist")
-							return
-						}
+						time.Sleep(5*time.Second)
 						cost := int64(0)
 						for i := 0; i < RunTime; i++ {
-							start := time.Now()
+							start := time.Now().UnixMicro()
+							//fmt.Printf("search start1 time: %d  \n", start)
+
 							_, err := client.Search(context.Background(), CollectionName, []string{PartitionName}, "", []string{},
 								vectors, "vec", entity.L2, topK, searchParams)
 							if err != nil {
 								panic(err)
 							}
-							searchCost := time.Since(start).Microseconds()
-							fmt.Printf("search cost: %d \n", searchCost)
-							cost += searchCost
+							end := time.Now().UnixMicro()
+							fmt.Printf("search start time: %d,  search end time: %d  search cost: %d \n", start, end, end-start)
+							cost += end-start
 						}
 						avgTime := float64(cost/RunTime)/1000.0/1000.0
 						qps := float64(nq)/avgTime
@@ -198,7 +208,9 @@ func search() {
 }
 
 func main() {
+	start := time.Now()
 	search()
+	fmt.Printf("all time, %d", time.Since(start).Microseconds())
 	//defer client.Close()
 	//var wg sync.WaitGroup
 	//for i := 0; i < Goroutine; i++ {
