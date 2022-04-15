@@ -1,3 +1,5 @@
 .idea/*
 test
 cost.txt
+*.txt
+*.log

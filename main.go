@@ -4,48 +4,37 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
 	"github.com/xiaocai2333/milvus-sdk-go/v2/entity"
+	"google.golang.org/grpc"
 	"io"
 	"math"
 	"os"
-	"sync"
+	"path"
+	"strconv"
 	"time"
 )
 
 const (
-	CollectionName = "taip"
-	PartitionName = "_default"
-	Dim = 768
+	CollectionName       = "taip"
+	DefaultPartitionName = "_default"
+	Dim                  = 768
 	QueryFile = "query.npy"
 	DataPath = "/data/milvus/raw_data/zjlab"
 	RunTime = 1000
-	Goroutine = 1
+	VecFieldName = "vec"
 )
 
-var (
-	TopK = []int{50}
-	NQ = []int{1}
-	EF = []int{50}
-	allQPS = 0.0
-)
-
-
-func createClient() milvusClient.Client{
-	client, err := milvusClient.NewGrpcClient(context.Background(), "172.18.50.4:19530")
+func createClient(addr string) milvusClient.Client{
+	opts := []grpc.DialOption{grpc.WithInsecure(),
+		grpc.WithBlock(),                //block connect until healthy or timeout
+		grpc.WithTimeout(20*time.Second)} // set connect timeout to 2 Second
+	client, err := milvusClient.NewGrpcClient(context.Background(), addr, opts...)
 	if err != nil {
 		panic(err)
-		//fmt.Println("create milvus client failed, err = ", err)
-		//return nil
 	}
-	//defer func(client milvusClient.Client) {
-	//	err := client.Close()
-	//	if err != nil {
-	//		//fmt.Println("close milvus client failed, err = ", err)
-	//		panic(err)
-	//	}
-	//}(client)
 	return client
 }
 
@@ -61,8 +50,7 @@ func BytesToFloat32(bits []byte) []float32 {
 	return vectors
 }
 
-func ReadBytesFromFile(nq int) []byte {
-	filePath := DataPath+"/"+QueryFile
+func ReadBytesFromFile(nq int, filePath string) []byte {
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -88,7 +76,8 @@ func ReadBytesFromFile(nq int) []byte {
 }
 
 func generatedEntities(nq int) []entity.Vector {
-	bits := ReadBytesFromFile(nq)
+	filePath := path.Join(DataPath, QueryFile)
+	bits := ReadBytesFromFile(nq, filePath)
 	vectors := make([]entity.Vector, 0)
 	for i := 0; i < nq; i++ {
 		var vector entity.FloatVector = BytesToFloat32(bits[i*Dim*4:(i+1)*Dim*4])
@@ -98,131 +87,65 @@ func generatedEntities(nq int) []entity.Vector {
 	return vectors
 }
 
-//func search(client milvusClient.Client) {
-//	has, err := client.HasCollection(context.Background(), "taip")
-//	if err != nil {
-//		fmt.Println("Get collection failed, err = ", err)
-//		return
-//	}
-//	if !has {
-//		fmt.Println("Get collection failed, collection is not exist")
-//		return
-//	}
-//
-//	for _, nq := range NQ {
-//		vectors := generatedEntities(nq)
-//		for _, ef := range EF {
-//			searchParams, err := entity.NewIndexHNSWSearchParam(ef)
-//			if err != nil {
-//				panic(err)
-//			}
-//			for _, topK := range TopK {
-//				allQPS := 0.0
-//				var wg sync.WaitGroup
-//				for g := 0; g < Goroutine; g++ {
-//					wg.Add(1)
-//					go func() {
-//						defer wg.Done()
-//						cost := int64(0)
-//						for i := 0; i < RunTime; i++ {
-//							start := time.Now()
-//							_, err := client.Search(context.Background(), CollectionName, []string{PartitionName}, "", []string{},
-//								vectors, "vec", entity.L2, topK, searchParams)
-//							if err != nil {
-//								panic(err)
-//							}
-//							cost += time.Since(start).Microseconds()
-//						}
-//						avgTime := float64(cost/RunTime)/1000.0/1000.0
-//						qps := float64(nq)/avgTime
-//						fmt.Printf("average search time: %f， vps: %f \n", avgTime, qps)
-//						allQPS += qps
-//					}()
-//				}
-//				wg.Wait()
-//				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, vps = %f \n", nq, topK, ef, Goroutine, allQPS)
-//			}
-//		}
-//	}
-//}
+func generateInsertFile(x int) string {
+	return "binary_" + strconv.Itoa(x) +"d_" + fmt.Sprintf("%5d", x) + ".npy"
+}
 
+func generateInsertPath(x int) string {
+	return path.Join(DataPath, generateInsertFile(x))
+}
 
-func search() {
-	for _, nq := range NQ {
-		vectors := generatedEntities(nq)
-		for _, ef := range EF {
-			searchParams, err := entity.NewIndexHNSWSearchParam(ef)
-			if err != nil {
-				panic(err)
-			}
-			for _, topK := range TopK {
-				var wg sync.WaitGroup
-				wg.Add(Goroutine)
-				for g := 0; g < Goroutine; g++ {
-					go func() {
-						defer wg.Done()
-						client := createClient()
-						defer client.Close()
-						//has, err := client.HasCollection(context.Background(), "taip")
-						//if err != nil {
-						//	fmt.Println("Get collection failed, err = ", err)
-						//	return
-						//}
-						//if !has {
-						//	fmt.Println("Get collection failed, collection is not exist")
-						//	return
-						//}
-						for i := 0; i < 5; i++ {
-							_, err := client.Search(context.Background(), CollectionName, []string{}, "", []string{},
-								vectors, "vec", entity.L2, topK, searchParams)
-							if err != nil {
-								panic(err)
-							}
-						}
-						time.Sleep(5*time.Second)
-						cost := int64(0)
-						for i := 0; i < RunTime; i++ {
-							start := time.Now().UnixMicro()
-							//fmt.Printf("search start1 time: %d  \n", start)
-
-							_, err := client.Search(context.Background(), CollectionName, []string{PartitionName}, "", []string{},
-								vectors, "vec", entity.L2, topK, searchParams)
-							if err != nil {
-								panic(err)
-							}
-							end := time.Now().UnixMicro()
-							fmt.Printf("search start time: %d,  search end time: %d  search cost: %d \n", start, end, end-start)
-							cost += end-start
-						}
-						avgTime := float64(cost/RunTime)/1000.0/1000.0
-						qps := float64(nq)/avgTime
-						fmt.Printf("average search time: %f， vps: %f \n", avgTime, qps)
-						allQPS += qps
-					}()
-				}
-				wg.Wait()
-				fmt.Printf("nq = %d, topK = %d, ef = %d, goroutine = %d, vps = %f \n", nq, topK, ef, Goroutine, allQPS)
-			}
+func generateInertData(step int, t string) entity.Column {
+	var colData entity.Column
+	switch t {
+	case "Int64":
+		intData := make([]int64, step)
+		for i := ID; i < PER_FILE_ROWS; i++ {
+			intData[i] = int64(i)
 		}
+		colData = entity.NewColumnInt64("id", intData)
+	case "FloatVector":
+		colData = entity.NewColumnFloatVector(VecFieldName, Dim, generatedInsertEntities(step))
+	default:
+		panic(fmt.Sprintf("column type %s is not supported", t))
 	}
+	return colData
+}
+
+func generatedInsertEntities(num int) [][]float32 {
+	filePath := generateInsertPath(num)
+	bits := ReadBytesFromFile(PER_FILE_ROWS, filePath)
+	vectors := make([][]float32, 0)
+	for i := 0; i < PER_FILE_ROWS; i++ {
+		vector := BytesToFloat32(bits[i*Dim*4:(i+1)*Dim*4])
+		//fmt.Println(len(vector))
+		vectors = append(vectors, vector)
+	}
+	return vectors
 }
 
 func main() {
-	start := time.Now()
-	search()
-	fmt.Printf("all time, %d", time.Since(start).Microseconds())
-	//defer client.Close()
-	//var wg sync.WaitGroup
-	//for i := 0; i < Goroutine; i++ {
-	//	wg.Add(1)
-	//	go func() {
-	//		defer wg.Done()
-	//		search()
-	//	}()
-	//}
-	//wg.Wait()
-	//client := createClient()
-	//
-	//search(client)
-	//client.Close()
+	var addr = *flag.String("host", "172.18.50.4:19530", "milvus addr")
+	var dataset = *flag.String("dataset", "taip", "dataset for test")
+	var indexType = *flag.String("index", "HNSW", "index type for collection, HNSW | IVF_FLAT")
+	var process = *flag.Int("process", 1, "goroutines for test")
+	var operation = *flag.String("op", "Search", "what do you want to do")
+
+	fmt.Printf("host: %s, dataset: %s, operation: %s, index type: %s, process: %d \n", addr, dataset,
+		operation, indexType, process)
+
+	client := createClient(addr)
+	defer client.Close()
+	if operation == "Insert" {
+		//TODO: Create collection and insert data
+	}
+	if operation == "Search" {
+		Search(client, dataset, indexType, process)
+	}
+	if operation == "Index" {
+		// TODO: Create index
+	}
+	if operation == "Load" {
+		// TODO: Load collection
+	}
 }
