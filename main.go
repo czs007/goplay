@@ -14,17 +14,23 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const (
 	CollectionName       = "taip"
 	DefaultPartitionName = "_default"
-	Dim                  = 768
-	QueryFile = "query.npy"
-	DataPath = "/data/milvus/raw_data/zjlab"
-	RunTime = 1000
+	RunTime      = 10000
 	VecFieldName = "vec"
+
+	TaipDataPath = "/data/milvus/raw_data/zjlab"
+	SiftDataPath = "/data/milvus/raw_data/sift"
+	QueryFile    = "query.npy"
+)
+
+var (
+	Dim = 768
 )
 
 func createClient(addr string) milvusClient.Client{
@@ -75,8 +81,8 @@ func ReadBytesFromFile(nq int, filePath string) []byte {
 	return chunks[:nq*Dim*4]
 }
 
-func generatedEntities(nq int) []entity.Vector {
-	filePath := path.Join(DataPath, QueryFile)
+func generatedEntities(dataPath string, nq int) []entity.Vector {
+	filePath := path.Join(dataPath, QueryFile)
 	bits := ReadBytesFromFile(nq, filePath)
 	vectors := make([]entity.Vector, 0)
 	for i := 0; i < nq; i++ {
@@ -88,64 +94,74 @@ func generatedEntities(nq int) []entity.Vector {
 }
 
 func generateInsertFile(x int) string {
-	return "binary_" + strconv.Itoa(x) +"d_" + fmt.Sprintf("%5d", x) + ".npy"
+	return "binary_" + strconv.Itoa(Dim) +"d_" + fmt.Sprintf("%05d", x) + ".npy"
 }
 
-func generateInsertPath(x int) string {
-	return path.Join(DataPath, generateInsertFile(x))
+func generateInsertPath(dataPath string, x int) string {
+	return path.Join(dataPath, generateInsertFile(x))
 }
 
-func generateInertData(step int, t string) entity.Column {
-	var colData entity.Column
-	switch t {
-	case "Int64":
-		intData := make([]int64, step)
-		for i := ID; i < PER_FILE_ROWS; i++ {
-			intData[i] = int64(i)
-		}
-		colData = entity.NewColumnInt64("id", intData)
-	case "FloatVector":
-		colData = entity.NewColumnFloatVector(VecFieldName, Dim, generatedInsertEntities(step))
-	default:
-		panic(fmt.Sprintf("column type %s is not supported", t))
-	}
-	return colData
+type Strings []string
+
+func newSliceValue(vals []string, p *[]string) *Strings {
+	*p = vals
+	return (*Strings)(p)
 }
 
-func generatedInsertEntities(num int) [][]float32 {
-	filePath := generateInsertPath(num)
-	bits := ReadBytesFromFile(PER_FILE_ROWS, filePath)
-	vectors := make([][]float32, 0)
-	for i := 0; i < PER_FILE_ROWS; i++ {
-		vector := BytesToFloat32(bits[i*Dim*4:(i+1)*Dim*4])
-		//fmt.Println(len(vector))
-		vectors = append(vectors, vector)
-	}
-	return vectors
+func (s *Strings) Set(val string) error {
+	*s = Strings(strings.Split(val, ","))
+	return nil
+}
+
+func (s *Strings) Get() interface{} {
+	return []string(*s)
+}
+
+func (s *Strings) String() string {
+	return strings.Join([]string(*s), ",")
+}
+
+var (
+	addr       string
+	dataset    string
+	indexType  string
+	process    int
+	operation  string
+	partitions []string
+)
+
+func init() {
+	flag.StringVar(&addr, "host", "172.18.50.4:19530", "milvus addr")
+	flag.StringVar(&dataset, "dataset", "taip", "dataset for test")
+	flag.StringVar(&indexType, "index", "FLAT", "index type for collection, HNSW | IVF_FLAT | FLAT")
+	flag.StringVar(&operation, "op", "", "what do you want to do")
+	flag.Var(newSliceValue([]string{}, &partitions), "p", "partitions which you want to load")
+	flag.IntVar(&process, "process", 1, "goroutines for test")
 }
 
 func main() {
-	var addr = *flag.String("host", "172.18.50.4:19530", "milvus addr")
-	var dataset = *flag.String("dataset", "taip", "dataset for test")
-	var indexType = *flag.String("index", "HNSW", "index type for collection, HNSW | IVF_FLAT")
-	var process = *flag.Int("process", 1, "goroutines for test")
-	var operation = *flag.String("op", "Search", "what do you want to do")
-
-	fmt.Printf("host: %s, dataset: %s, operation: %s, index type: %s, process: %d \n", addr, dataset,
-		operation, indexType, process)
+	flag.Parse()
+	fmt.Printf("host: %s, dataset: %s, operation: %s, index type: %s, process: %d, partitions: %s \n", addr, dataset,
+		operation, indexType, process, partitions)
 
 	client := createClient(addr)
 	defer client.Close()
+	if dataset == "taip" {
+		Dim = 768
+	}else if dataset == "sift" {
+		Dim = 128
+	}
 	if operation == "Insert" {
-		//TODO: Create collection and insert data
+		Insert(client, dataset, indexType)
 	}
 	if operation == "Search" {
 		Search(client, dataset, indexType, process)
 	}
 	if operation == "Index" {
-		// TODO: Create index
+		CreateIndex(client, dataset, indexType)
 	}
 	if operation == "Load" {
-		// TODO: Load collection
+		Load(client, dataset, partitions)
 	}
+	return
 }
