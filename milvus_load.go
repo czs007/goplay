@@ -11,6 +11,7 @@ var (
 	CurLoadRows = 0
 	TotalLoadRows = 0
 )
+
 func Load(client milvusClient.Client, dataset string, partitions []string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -28,6 +29,13 @@ func Load(client milvusClient.Client, dataset string, partitions []string) {
 	}
 
 	confirmLoadComplete(client, dataset)
+	return
+}
+
+func Release(client milvusClient.Client, dataset string) {
+	if err := client.ReleaseCollection(context.Background(), dataset); err != nil {
+		panic(err)
+	}
 	return
 }
 

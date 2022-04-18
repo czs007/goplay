@@ -163,5 +163,8 @@ func main() {
 	if operation == "Load" {
 		Load(client, dataset, partitions)
 	}
+	if operation == "Release" {
+		Release(client, dataset)
+	}
 	return
 }
