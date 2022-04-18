@@ -51,7 +51,7 @@ func Search(client milvusClient.Client, dataset, indexType string, process int) 
 						for i := 0; i < RunTime; i++ {
 							start := time.Now()
 							_, err := client.Search(context.Background(), dataset, []string{}, "", []string{},
-								vectors, VecFieldName, entity.L2, topK, searchParams)
+								vectors, VecFieldName, entity.L2, topK, searchParams, 1)
 							if err != nil {
 								panic(err)
 							}
