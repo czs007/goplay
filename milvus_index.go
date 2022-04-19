@@ -5,8 +5,6 @@ import (
 	"fmt"
 	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
 	"github.com/xiaocai2333/milvus-sdk-go/v2/entity"
-	"io"
-	"os"
 	"time"
 )
 
@@ -51,8 +49,7 @@ func printCreateIndexProgress(ctx context.Context) {
 			fmt.Println("\nCreate index done!")
 			return
 		case <-ticker.C:
-			io.WriteString(os.Stdout, fmt.Sprintf("Indexing %s:[%-8d/%-9d]\r\n", CurIndexType, CurIndexRows, TotalIndexRows))
-			//fmt.Printf("Indexing %s:[%-8d/%-9d]\r", CurIndexType, CurIndexRows, TotalIndexRows)
+			fmt.Printf("Indexing %s:[%-8d/%-9d]\r", CurIndexType, CurIndexRows, TotalIndexRows)
 		}
 	}
 }
