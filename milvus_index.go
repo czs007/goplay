@@ -25,8 +25,7 @@ func CreateIndex(client milvusClient.Client, dataset string, indexType string) {
 	}
 	CurIndexType = indexType
 	_ = client.Flush(ctx, dataset, false)
-	go printCreateIndexProgress(ctx)
-	if dataset == "taip" {
+	if dataset == "taip" || dataset == "zc" {
 		if entity.IndexType(indexType) == entity.HNSW {
 			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewTaipHNSWIndex(), true); err != nil {
 				panic(err)
@@ -37,6 +36,7 @@ func CreateIndex(client milvusClient.Client, dataset string, indexType string) {
 			}
 		}
 	}
+	go printCreateIndexProgress(ctx)
 	confirmIndexComplete(ctx, client, dataset, VecFieldName)
 	return
 }

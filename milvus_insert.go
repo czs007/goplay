@@ -69,7 +69,7 @@ func Insert(client milvusClient.Client, dataset, indexType string) {
 	}
 
 	go printInsertProgress(ctx)
-	if dataset == "taip" {
+	if dataset == "taip" || dataset == "zc" {
 		// 1. Create index
 		if indexType == "HNSW" {
 			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewTaipHNSWIndex(), false); err != nil {

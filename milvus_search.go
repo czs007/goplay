@@ -29,7 +29,7 @@ func Search(client milvusClient.Client, dataset, indexType string, process int, 
 	}
 
 	var dataPath string
-	if dataset == "taip" {
+	if dataset == "taip" || dataset == "zc" {
 		dataPath = TaipDataPath
 	}else if dataset == "sift" {
 		dataPath = SiftDataPath

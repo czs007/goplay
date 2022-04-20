@@ -146,7 +146,7 @@ func main() {
 
 	client := createClient(addr)
 	defer client.Close()
-	if dataset == "taip" {
+	if dataset == "taip" || dataset == "zc" {
 		Dim = 768
 	}else if dataset == "sift" {
 		Dim = 128
