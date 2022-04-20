@@ -32,9 +32,15 @@ func Load(client milvusClient.Client, dataset string, partitions []string) {
 	return
 }
 
-func Release(client milvusClient.Client, dataset string) {
-	if err := client.ReleaseCollection(context.Background(), dataset); err != nil {
-		panic(err)
+func Release(client milvusClient.Client, dataset string, partitions []string) {
+	if len(partitions) == 0 {
+		if err := client.ReleaseCollection(context.Background(), dataset); err != nil {
+			panic(err)
+		}
+	}else {
+		if err := client.ReleasePartitions(context.Background(), dataset, partitions); err != nil {
+			panic(err)
+		}
 	}
 	return
 }

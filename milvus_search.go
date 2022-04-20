@@ -18,7 +18,7 @@ var (
 )
 
 
-func Search(client milvusClient.Client, dataset, indexType string, process int) {
+func Search(client milvusClient.Client, dataset, indexType string, process int, partitions []string) {
 	var pList []int
 	if indexType == "HNSW" {
 		pList = EF
@@ -50,7 +50,7 @@ func Search(client milvusClient.Client, dataset, indexType string, process int) 
 						cost := int64(0)
 						for i := 0; i < RunTime; i++ {
 							start := time.Now()
-							_, err := client.Search(context.Background(), dataset, []string{}, "", []string{},
+							_, err := client.Search(context.Background(), dataset, partitions, "", []string{},
 								vectors, VecFieldName, entity.L2, topK, searchParams, 1)
 							if err != nil {
 								panic(err)

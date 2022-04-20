@@ -21,7 +21,7 @@ import (
 const (
 	CollectionName       = "taip"
 	DefaultPartitionName = "_default"
-	RunTime      = 1000
+	RunTime      = 10000
 	VecFieldName = "vec"
 
 	TaipDataPath = "/data/milvus/raw_data/zjlab"
@@ -155,7 +155,7 @@ func main() {
 		Insert(client, dataset, indexType)
 	}
 	if operation == "Search" {
-		Search(client, dataset, indexType, process)
+		Search(client, dataset, indexType, process, partitions)
 	}
 	if operation == "Index" {
 		CreateIndex(client, dataset, indexType)
@@ -164,7 +164,7 @@ func main() {
 		Load(client, dataset, partitions)
 	}
 	if operation == "Release" {
-		Release(client, dataset)
+		Release(client, dataset, partitions)
 	}
 	return
 }

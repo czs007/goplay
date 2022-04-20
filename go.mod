@@ -12,6 +12,7 @@ require (
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
 	google.golang.org/protobuf v1.23.0 // indirect
 )
+
 //
 //replace (
 //	github.com/xiaocai2333/milvus-sdk-go/v2 => /home/zc/go/src/milvus-sdk-go
