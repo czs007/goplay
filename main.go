@@ -21,7 +21,7 @@ import (
 const (
 	CollectionName       = "taip"
 	DefaultPartitionName = "_default"
-	RunTime      = 10000
+	RunTime      = 1000
 	VecFieldName = "vec"
 
 	TaipDataPath = "/data/milvus/raw_data/zjlab"
