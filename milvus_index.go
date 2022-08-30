@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
+	"github.com/xiaocai2333/milvus-sdk-go/v2/entity"
 	"time"
-
-	milvusClient "github.com/zhagnlu/milvus-sdk-go/v2/client"
-	"github.com/zhagnlu/milvus-sdk-go/v2/entity"
 )
 
 var (
-	CurIndexType   = "HNSW"
-	CurIndexRows   = int64(0)
+	CurIndexType = "HNSW"
+	CurIndexRows = int64(0)
 	TotalIndexRows = int64(0)
 )
 
@@ -26,24 +25,13 @@ func CreateIndex(client milvusClient.Client, dataset string, indexType string) {
 	}
 	CurIndexType = indexType
 	_ = client.Flush(ctx, dataset, false)
-	fmt.Printf("flush:%s done \n", dataset)
-	if dataset == "taip" || dataset == "zc" {
+	if dataset == "taip" || dataset == "sift" {
 		if entity.IndexType(indexType) == entity.HNSW {
-			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewTaipHNSWIndex(), true); err != nil {
+			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewSiftHNSWIndex(), true); err != nil {
 				panic(err)
 			}
-		} else if entity.IndexType(indexType) == entity.IvfFlat {
+		}else if entity.IndexType(indexType) == entity.IvfFlat {
 			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewTaipIVFFLATIndex(), true); err != nil {
-				panic(err)
-			}
-		}
-	} else if dataset == "sift" {
-		if entity.IndexType(indexType) == entity.HNSW {
-			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewSiftHNSWIndex(), false); err != nil {
-				panic(err)
-			}
-		} else if entity.IndexType(indexType) == entity.IvfFlat {
-			if err := client.CreateIndex(ctx, dataset, VecFieldName, NewSiftIVFFLATIndex(), false); err != nil {
 				panic(err)
 			}
 		}
@@ -77,7 +65,7 @@ func confirmIndexComplete(ctx context.Context, client milvusClient.Client, datas
 		if err != nil {
 			panic(err)
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(2*time.Second)
 	}
 	return
 }
@@ -99,7 +87,7 @@ func NewTaipIVFFLATIndex() *entity.IndexIvfFlat {
 }
 
 func NewSiftHNSWIndex() *entity.IndexHNSW {
-	indexParams, err := entity.NewIndexHNSW(entity.L2, 8, 64)
+	indexParams, err := entity.NewIndexHNSW(entity.L2, 16, 256)
 	if err != nil {
 		panic(err)
 	}
@@ -107,7 +95,7 @@ func NewSiftHNSWIndex() *entity.IndexHNSW {
 }
 
 func NewSiftIVFFLATIndex() *entity.IndexIvfFlat {
-	indexParams, err := entity.NewIndexIvfFlat(entity.L2, 2048)
+	indexParams, err := entity.NewIndexIvfFlat(entity.L2, 1024)
 	if err != nil {
 		panic(err)
 	}
