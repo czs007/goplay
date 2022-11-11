@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	milvusClient "github.com/zhagnlu/milvus-sdk-go/v2/client"
-	"github.com/zhagnlu/milvus-sdk-go/v2/entity"
+	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
+	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 )
 
 func CreateCollection(client milvusClient.Client, dataset string, partitionNum int) {

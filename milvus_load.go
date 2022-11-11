@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
+	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
 	"time"
 )
 

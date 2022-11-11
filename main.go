@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	milvusClient "github.com/xiaocai2333/milvus-sdk-go/v2/client"
-	"github.com/xiaocai2333/milvus-sdk-go/v2/entity"
+	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
+	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 	"google.golang.org/grpc"
 	"io"
 	"math"
@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	CollectionName       = "taip"
+	CollectionName       = "hello_milvus2"
 	DefaultPartitionName = "_default"
-	RunTime      = 10
-	VecFieldName = "vec"
+	RunTime      = 1000
+	VecFieldName = "embeddings"
 
 	TaipDataPath = "/data/milvus/raw_data/zjlab"
 	SiftDataPath = "/test/milvus/raw_data/sift1b/"
@@ -146,25 +146,8 @@ func main() {
 
 	client := createClient(addr)
 	defer client.Close()
-	if dataset == "taip" || dataset == "zc" {
-		Dim = 768
-	}else if dataset == "sift" {
-		Dim = 128
-	}
-	if operation == "Insert" {
-		Insert(client, dataset, indexType)
-	}
-	if operation == "Search" {
-		Search(client, dataset, indexType, process, partitions)
-	}
-	if operation == "Index" {
-		CreateIndex(client, dataset, indexType)
-	}
-	if operation == "Load" {
-		Load(client, dataset, partitions)
-	}
-	if operation == "Release" {
-		Release(client, dataset, partitions)
-	}
+	Dim = 128
+	dataset = CollectionName
+	Search(client, dataset, indexType, process, partitions)
 	return
 }
